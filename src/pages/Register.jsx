@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { baseURL } from '../services/baseURL';
 import { UserPlus, Mail, Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
@@ -20,6 +22,26 @@ const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
   const toast = useToast();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await axios.get(`${baseURL}/auth/setup-status`);
+        if (!cancelled && data.needsSetup) {
+          navigate('/login', {
+            replace: true,
+            state: { message: 'Create the first superadmin on the login page before registering other admins.' }
+          });
+        }
+      } catch {
+        /* allow register if status check fails */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

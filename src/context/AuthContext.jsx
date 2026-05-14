@@ -9,6 +9,7 @@ const AuthContext = createContext({
   loading: true,
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
+  completeSetup: async () => ({ success: false }),
   logout: async () => { },
   isAuthenticated: false,
   userType: 'admin'
@@ -138,6 +139,36 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  const completeSetup = async (username, email, password, setupKey) => {
+    try {
+      const payload = { username, email, password };
+      if (setupKey != null && String(setupKey).trim() !== '') {
+        payload.setupKey = String(setupKey).trim();
+      }
+      const response = await axios.post(`${API_URL}/auth/setup`, payload, {
+        withCredentials: true
+      });
+
+      const { token: newToken, admin: adminData } = response.data;
+
+      try {
+        localStorage.setItem('token', newToken);
+        localStorage.setItem('userType', 'admin');
+      } catch (storageError) {
+        console.warn('localStorage save failed:', storageError);
+      }
+      setToken(newToken);
+      setAdmin(adminData);
+
+      return { success: true, userType: 'admin' };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Setup failed'
+      };
+    }
+  };
+
   const logout = async () => {
     try {
       await axios.post(
@@ -171,6 +202,7 @@ const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    completeSetup,
     logout,
     isAuthenticated: !!admin,
     userType: (() => {
